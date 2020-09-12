@@ -1,0 +1,195 @@
+---
+title: "zoocasa"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr, warn.conflicts = FALSE)
+library(forcats)
+library(ggplot2)
+library(readr)
+library(highcharter)
+library(kableExtra)
+library(htmlwidgets)
+```
+
+```{r}
+df<-read_csv(file="data5.csv")
+df$Price<-as.numeric(df$Price)
+df$ParkingSpots<-as.numeric(df$ParkingSpots)
+df$GEO_NAME<-factor(df$GEO_NAME)
+df$Type<-factor(df$Type)
+df$lat<-as.numeric(df$lat)
+df$lng<-as.numeric(df$lng)
+df$DaysActive<-as.numeric(df$DaysActive)
+df$GarageSpaces<-as.numeric(df$GarageSpaces)
+df$Levels<-factor(df$Levels)
+df$CentralVac<-factor(df$CentralVac)
+df$Fireplace<-factor(df$Fireplace)
+df$Garage<-factor(df$Garage)
+df$Exterior<-factor(df$Exterior)
+df$Basement<-factor(df$Basement)
+df$Driveway<-factor(df$Driveway)
+df$Heating<-factor(df$Heating)
+df$AC<-factor(df$AC)
+df$Fuel<-factor(df$Fuel)
+df$Age<-factor(df$Age)
+df$Size1<-as.numeric(df$Size1)
+```
+
+```{r}
+#str(df)
+```
+
+```{r}
+x<-df$Price
+hist(x, breaks=200, xlim=c(50,15000), col="red", xlab="Price", ylab="Number of houses",main="Distribution of the Zoocasa dataset")
+```
+```{r}
+#Detecting outliers
+outliers<-boxplot(df$Price, plot=FALSE)$out
+
+#Removing outliers
+df<-df[-which(df$Price %in% outliers),]
+```
+
+```{r}
+p<-ggplot(df, aes(x="", y=Price), xlim=c(50,5000))
+p+geom_boxplot()+coord_flip()+stat_boxplot(geom = 'errorbar', width=0.2)
+```
+
+```{r}
+#Filtering for Toronto and GTA
+regions<-c("Toronto","Burlington","Milton","Mississauga","Brampton","Caledon","King","Vaughan","Markham","Whitchurch-Stouffville","Pickering","Ajax","Whitby","Oshawa","Clarington","Newmarket","Richmond Hill","East-Gwillimbury","Oakville","Aurora","Brock","Uxbridge","Scugog","Georgina","Halton-Hills")
+b<-filter(df, GEO_NAME %in% regions)
+#b<-b%>%filter(Type!="Cottage" & Type!="Duplex" & Type!="Triplex" & Type!="Fourplex" & Type!="Rural Resid" & Type!="Rowhouse" & Type!="Link" & Type!="Multiplex")
+```
+
+```{r}
+#Distriution of data across regions
+x<-b%>%filter(!is.na(GEO_NAME))%>%group_by(GEO_NAME)%>%summarise(n = n())%>%arrange(desc(n))
+listings<-hchart(x, type="column", hcaes(x = GEO_NAME, y = n, color=n))%>%
+hc_xAxis(title = list(text = "<b>Location<b>", color="black"))%>%
+hc_yAxis(title = list(text = "<b>Number of Listings<b>"), color="black")%>%
+hc_title(text = "<b>Number of listing for different regions in Toronto and GTA</b>", align = "center", color = "black")
+saveWidget(listings, file="listings.html")
+```
+
+```{r}
+#Average price for different regions Toronto and GTA
+x<-b%>%filter(!is.na(GEO_NAME) & (GEO_NAME!="Brock") & (GEO_NAME!="King") & (GEO_NAME!="Uxbridge") & (GEO_NAME!="Scugog"))%>%group_by(GEO_NAME)%>%summarise(Average_Price=mean(ListPrice, na.rm=TRUE))%>%arrange(desc(Average_Price))
+PriceListings<-hchart(x, type="bar", hcaes(x = GEO_NAME, y = Average_Price, color=Average_Price))%>%
+hc_xAxis(title = list(text = "<b>Location<b>", color="black"))%>%
+hc_yAxis(title = list(text = "<b>Average Price<b>"), color="black")%>%
+hc_title(text = "<b>Price vs Region</b>", align = "center", color = "black")
+saveWidget(PriceListings, file="PriceListings.html")
+```
+
+```{r}
+#Average walkscore for different regions Toronto and GTA
+x<-b%>%filter(!is.na(GEO_NAME) & (GEO_NAME!="Brock") & (GEO_NAME!="King") & (GEO_NAME!="Uxbridge") & (GEO_NAME!="Scugog"))%>%group_by(GEO_NAME)%>%summarise(Average_Walkscore=mean(walkscore, na.rm=TRUE))%>%arrange(desc(Average_Walkscore))%>%arrange()
+WalkscoreListings<-hchart(x, type="bar", hcaes(x = GEO_NAME, y = Average_Walkscore, color=Average_Walkscore))%>%
+hc_xAxis(title = list(text = "<b>Location<b>", color="black"))%>%
+hc_yAxis(title = list(text = "<b>Average Walkscore<b>"), color="black")%>%
+hc_title(text = "<b>Walkscore vs Region</b>", align = "center", color = "black")
+saveWidget(WalkscoreListings, file="WalkscoreListings.html")
+```
+
+```{r}
+#Average price for different types of houses Toronto and GTA
+x<-b%>%filter(!is.na(GEO_NAME) & (GEO_NAME!="Brock") & (GEO_NAME!="King") & (GEO_NAME!="Uxbridge") & (GEO_NAME!="Scugog"))%>%group_by(Type)%>%count()
+CountType<-hchart(x, type="column", hcaes(x = Type, y = n, color=n))%>%
+hc_yAxis(title = list(text = "<b>Number of Houses<b>"), color="black")%>%
+hc_title(text = "<b>Number of House vs Type</b>", align = "center", color = "black")
+saveWidget(CountType, file="CountType.html")
+```
+
+
+```{r}
+#Average price for different types of houses Toronto and GTA
+x<-b%>%filter(!is.na(GEO_NAME) & (GEO_NAME!="Brock") & (GEO_NAME!="King") & (GEO_NAME!="Uxbridge") & (GEO_NAME!="Scugog"))%>%group_by(Type)%>%summarise(Average_Price=mean(Price, na.rm=TRUE))%>%arrange(desc(Average_Price))%>%arrange()
+PriceType<-hchart(x, type="column", hcaes(x = Type, y = Average_Price, color=Average_Price))%>%
+hc_title(text = "<b>Average Price vs Type</b>", align = "center", color = "black")
+saveWidget(PriceType, file="PriceType.html")
+```
+
+
+```{r}
+m<-b%>%filter(!is.na(ListPrice))
+ggplot(m, aes(x=ListPrice, y=Price)) + geom_point(color="blue")+geom_smooth(method=lm, se=FALSE, linetype="dashed", color="darkred")+labs(title = "Asking Price vs. Sold Price", x = "Asking Price", y="Sold Price")
+```
+
+```{r}
+#Distribution of data after removing outliers
+x<-df$Price
+h<-hist(x, breaks=50, xlim=c(50,10000), col="red", xlab="Price",main="Histogram with Normal Curve")
+```
+
+```{r}
+t.test(m$ListPrice, m$Price, paired = TRUE, alternative = "two.sided")
+```
+
+```{r}
+n<-m%>%group_by(GEO_NAME)%>%summarise(Average_Asking=mean(ListPrice,na.rm = TRUE),Average_Sold=mean(Price,na.rm = TRUE), Difference=(Average_Sold-Average_Asking))
+n
+```
+
+```{r}
+n<-b%>%group_by(GEO_NAME,Beds,Baths)%>%summarise(Avg_Price=mean(Price,na.rm = TRUE))#%>%order_by(Avg_Price,GEO_NAME,Beds,Baths)
+```
+
+```{r}
+kable(n)%>%kable_styling(bootstrap_options = c("striped", "hover"),font_size = 14)%>%row_spec(0, bold = T, color = "white", background = "purple")
+```
+
+```{r}
+#Removing NAs price and size
+x<-b%>%filter(!is.na(Price) & !is.na(Size1) & !is.na(GarageSpaces))
+```
+
+```{r}
+cor(x$Beds,x$Price)
+```
+```{r}
+cor(x$Baths,x$Price)
+```
+```{r}
+cor(x$ParkingSpots,x$Price)
+```
+```{r}
+cor(x$GarageSpaces,x$Price)
+```
+
+```{r}
+cor(x$Size1,x$Price)
+```
+```{r}
+z<-b%>%group_by(Size1)%>%summarise(Average_Price=mean(Price,na.rm = TRUE))
+ggplot(z, aes(x=Size1, y=Average_Price)) + geom_point(color="blue")
+```
+
+```{r}
+cor(x$walkscore,x$Price)
+```
+
+```{r}
+cor(x$Size1,x$walkscore)
+```
+```{r}
+z<-b%>%group_by(Size1)%>%summarise(Average_Walkscore=mean(walkscore,na.rm = TRUE))
+ggplot(z, aes(x=Average_Walkscore, y=Size1)) + geom_point(color="blue")
+```
+
+
+```{r}
+model<-lm(b$Price~b$Beds+b$Baths+b$ParkingSpots+b$GarageSpaces+b$Size1+b$walkscore+b$CentralVac+b$Fireplace+b$GEO_NAME+b$Heating+b$Type)
+summary(model)
+```
+
+
+
